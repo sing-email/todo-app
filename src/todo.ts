@@ -3,20 +3,36 @@ export interface Todo {
   title: string;
   completed: boolean;
   createdAt: string;
+  projectId?: string;
 }
 
 export class TodoStore {
   private todos: Map<string, Todo> = new Map();
 
-  add(title: string): Todo {
+  add(title: string, projectId?: string): Todo {
     const id = crypto.randomUUID();
     const todo: Todo = {
       id,
       title,
       completed: false,
       createdAt: new Date().toISOString(),
+      projectId,
     };
     this.todos.set(id, todo);
+    return todo;
+  }
+
+  listByProject(projectId: string): Todo[] {
+    return Array.from(this.todos.values()).filter(
+      (t) => t.projectId === projectId,
+    );
+  }
+
+  updateProjectId(id: string, projectId: string | undefined): Todo | undefined {
+    const todo = this.todos.get(id);
+    if (todo) {
+      todo.projectId = projectId;
+    }
     return todo;
   }
 
