@@ -1,3 +1,6 @@
+import type { Todo } from "./todo.js";
+import { TodoStore } from "./todo.js";
+
 export interface Project {
   id: string;
   name: string;
@@ -7,8 +10,10 @@ export interface Project {
 export class ProjectStore {
   private projects: Map<string, Project> = new Map();
   private inboxId: string;
+  private todoStore: TodoStore;
 
-  constructor() {
+  constructor(todoStore: TodoStore) {
+    this.todoStore = todoStore;
     const inbox = this.createProject("Inbox");
     this.inboxId = inbox.id;
   }
@@ -42,5 +47,17 @@ export class ProjectStore {
       (p) => p.id !== this.inboxId,
     );
     return [inbox, ...rest];
+  }
+
+  reassignTodoProject(todoId: string, projectId: string): Todo {
+    const project = this.projects.get(projectId);
+    if (!project) {
+      throw new Error(`Project not found: ${projectId}`);
+    }
+    const todo = this.todoStore.moveToProject(todoId, projectId);
+    if (!todo) {
+      throw new Error(`Todo not found: ${todoId}`);
+    }
+    return todo;
   }
 }
