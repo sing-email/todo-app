@@ -3,6 +3,7 @@ export interface Todo {
   title: string;
   completed: boolean;
   createdAt: string;
+  projectId?: string;
 }
 
 export class TodoStore {
@@ -38,5 +39,19 @@ export class TodoStore {
 
   delete(id: string): boolean {
     return this.todos.delete(id);
+  }
+
+  listByProject(projectId: string): Todo[] {
+    return Array.from(this.todos.values()).filter(
+      (todo) => todo.projectId === projectId,
+    );
+  }
+
+  updateProjectId(id: string, projectId: string): Todo | undefined {
+    const todo = this.todos.get(id);
+    if (todo) {
+      todo.projectId = projectId;
+    }
+    return todo;
   }
 }
