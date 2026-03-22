@@ -76,4 +76,61 @@ describe("ProjectStore", () => {
       expect(updated.name).toBe("Work");
     });
   });
+
+  describe("add", () => {
+    it("throws when adding a project with an empty name", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("")).toThrowError(
+        "Project name cannot be empty",
+      );
+    });
+
+    it("throws when adding a project with a whitespace-only name", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("   ")).toThrowError(
+        "Project name cannot be empty",
+      );
+    });
+
+    it("throws when adding a project with a duplicate name (case-insensitive)", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+      projectStore.add("Work");
+
+      expect(() => projectStore.add("work")).toThrowError(
+        "A project with this name already exists",
+      );
+    });
+
+    it("throws when adding a project named Inbox (reserved)", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("Inbox")).toThrowError(
+        "A project with this name already exists",
+      );
+    });
+
+    it("throws when adding a project named inbox (case-insensitive reserved)", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("inbox")).toThrowError(
+        "A project with this name already exists",
+      );
+    });
+
+    it("trims whitespace from the name before storing", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      const project = projectStore.add("  Work  ");
+
+      expect(project.name).toBe("Work");
+    });
+  });
 });

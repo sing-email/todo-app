@@ -32,7 +32,18 @@ export class ProjectStore {
   }
 
   add(name: string): Project {
-    return this.createProject(name);
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error("Project name cannot be empty");
+    }
+
+    for (const existing of this.projects.values()) {
+      if (existing.name.toLowerCase() === trimmed.toLowerCase()) {
+        throw new Error("A project with this name already exists");
+      }
+    }
+
+    return this.createProject(trimmed);
   }
 
   get(id: string): Project | undefined {
