@@ -23,6 +23,13 @@ describe("TodoStore", () => {
     expect(store.get(todo.id)?.completed).toBe(true);
   });
 
+  it("throws when completing a non-existent todo", () => {
+    const store = new TodoStore();
+    expect(() => store.complete("no-such-id")).toThrow(
+      "Todo not found: no-such-id",
+    );
+  });
+
   it("deletes a todo", () => {
     const store = new TodoStore();
     const todo = store.add("Delete me");
@@ -58,7 +65,9 @@ describe("TodoStore", () => {
     it("throws when projectId is an empty string", () => {
       const store = new TodoStore();
       const todo = store.add("Buy milk");
-      expect(() => store.moveToProject(todo.id, "")).toThrow();
+      expect(() => store.moveToProject(todo.id, "")).toThrow(
+        "projectId must not be empty",
+      );
     });
   });
 });
