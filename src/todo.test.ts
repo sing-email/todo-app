@@ -26,7 +26,26 @@ describe("TodoStore", () => {
   it("deletes a todo", () => {
     const store = new TodoStore();
     const todo = store.add("Delete me");
-    expect(store.delete(todo.id)).toBe(true);
+    store.delete(todo.id);
     expect(store.get(todo.id)).toBeUndefined();
+  });
+
+  it("complete throws when todo not found", () => {
+    const store = new TodoStore();
+    expect(() => store.complete("nonexistent")).toThrowError(
+      "Todo not found: nonexistent",
+    );
+  });
+
+  it("delete throws when todo not found", () => {
+    const store = new TodoStore();
+    expect(() => store.delete("nonexistent")).toThrowError(
+      "Todo not found: nonexistent",
+    );
+  });
+
+  it("get returns undefined for missing todo", () => {
+    const store = new TodoStore();
+    expect(store.get("nonexistent")).toBeUndefined();
   });
 });
