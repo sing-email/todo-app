@@ -29,4 +29,27 @@ describe("TodoStore", () => {
     expect(store.delete(todo.id)).toBe(true);
     expect(store.get(todo.id)).toBeUndefined();
   });
+
+  describe("moveToProject", () => {
+    it("moves a todo to a different project", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task", "project-a");
+      store.moveToProject(todo.id, "project-b");
+      expect(store.get(todo.id)?.projectId).toBe("project-b");
+    });
+
+    it("returns the updated todo", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task", "project-a");
+      const result = store.moveToProject(todo.id, "project-b");
+      expect(result?.id).toBe(todo.id);
+      expect(result?.projectId).toBe("project-b");
+    });
+
+    it("returns undefined for non-existent todo", () => {
+      const store = new TodoStore();
+      const result = store.moveToProject("non-existent", "project-b");
+      expect(result).toBeUndefined();
+    });
+  });
 });

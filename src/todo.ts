@@ -44,6 +44,14 @@ export class TodoStore {
     return todo;
   }
 
+  moveToProject(todoId: string, projectId: string): Todo | undefined {
+    const todo = this.todos.get(todoId);
+    if (todo) {
+      todo.projectId = projectId;
+    }
+    return todo;
+  }
+
   delete(id: string): boolean {
     return this.todos.delete(id);
   }
