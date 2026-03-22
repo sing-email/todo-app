@@ -29,4 +29,35 @@ describe("TodoStore", () => {
     expect(store.delete(todo.id)).toBe(true);
     expect(store.get(todo.id)).toBeUndefined();
   });
+
+  it("adds a todo with a due date", () => {
+    const store = new TodoStore();
+    const todo = store.add("Submit report", "2026-04-01");
+    expect(todo.title).toBe("Submit report");
+    expect(todo.dueDate).toBe("2026-04-01");
+  });
+
+  it("adds a todo without a due date", () => {
+    const store = new TodoStore();
+    const todo = store.add("No deadline");
+    expect(todo.dueDate).toBeUndefined();
+  });
+
+  it("lists overdue todos", () => {
+    const store = new TodoStore();
+    store.add("Past due", "2020-01-01");
+    store.add("Future", "2099-12-31");
+    store.add("No date");
+    const overdue = store.listOverdue();
+    expect(overdue).toHaveLength(1);
+    expect(overdue[0].title).toBe("Past due");
+  });
+
+  it("completed todos are not overdue", () => {
+    const store = new TodoStore();
+    const todo = store.add("Done task", "2020-01-01");
+    store.complete(todo.id);
+    const overdue = store.listOverdue();
+    expect(overdue).toHaveLength(0);
+  });
 });

@@ -3,18 +3,20 @@ export interface Todo {
   title: string;
   completed: boolean;
   createdAt: string;
+  dueDate?: string;
 }
 
 export class TodoStore {
   private todos: Map<string, Todo> = new Map();
 
-  add(title: string): Todo {
+  add(title: string, dueDate?: string): Todo {
     const id = crypto.randomUUID();
     const todo: Todo = {
       id,
       title,
       completed: false,
       createdAt: new Date().toISOString(),
+      dueDate,
     };
     this.todos.set(id, todo);
     return todo;
@@ -34,6 +36,13 @@ export class TodoStore {
       todo.completed = true;
     }
     return todo;
+  }
+
+  listOverdue(): Todo[] {
+    const now = new Date().toISOString().slice(0, 10);
+    return Array.from(this.todos.values()).filter(
+      (todo) => !todo.completed && todo.dueDate !== undefined && todo.dueDate < now,
+    );
   }
 
   delete(id: string): boolean {
