@@ -29,4 +29,13 @@ describe("TodoStore", () => {
     expect(store.delete(todo.id)).toBe(true);
     expect(store.get(todo.id)).toBeUndefined();
   });
+
+  describe("moveToProject", () => {
+    it("throws when moving a non-existent todo", () => {
+      const store = new TodoStore();
+      expect(() => store.moveToProject("no-such-id", "project-1")).toThrow(
+        "Todo not found: no-such-id",
+      );
+    });
+  });
 });
