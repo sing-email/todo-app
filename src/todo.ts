@@ -1,22 +1,46 @@
+import { ProjectStore } from "./project.js";
+
 export interface Todo {
   id: string;
   title: string;
   completed: boolean;
   createdAt: string;
+  projectId?: string;
 }
 
 export class TodoStore {
   private todos: Map<string, Todo> = new Map();
+  private projectStore?: ProjectStore;
 
-  add(title: string): Todo {
+  constructor(projectStore?: ProjectStore) {
+    this.projectStore = projectStore;
+  }
+
+  add(title: string, projectId?: string): Todo {
     const id = crypto.randomUUID();
     const todo: Todo = {
       id,
       title,
       completed: false,
       createdAt: new Date().toISOString(),
+      ...(projectId !== undefined && { projectId }),
     };
     this.todos.set(id, todo);
+    return todo;
+  }
+
+  moveToProject(todoId: string, projectId: string): Todo {
+    const todo = this.todos.get(todoId);
+    if (!todo) {
+      throw new Error(`Todo not found: ${todoId}`);
+    }
+    if (todo.projectId === projectId) {
+      return todo;
+    }
+    if (!this.projectStore?.has(projectId)) {
+      throw new Error(`Project not found: ${projectId}`);
+    }
+    todo.projectId = projectId;
     return todo;
   }
 
