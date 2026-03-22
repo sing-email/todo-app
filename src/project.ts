@@ -1,5 +1,3 @@
-import { TodoStore } from "./todo.js";
-
 export interface Project {
   id: string;
   name: string;
@@ -10,7 +8,7 @@ export class ProjectStore {
   private projects: Map<string, Project> = new Map();
   private inboxId: string;
 
-  constructor(private todoStore: TodoStore) {
+  constructor() {
     const inbox = this.createProject("Inbox");
     this.inboxId = inbox.id;
   }
