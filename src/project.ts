@@ -55,7 +55,7 @@ export class ProjectStore {
 
     const todos = this.todoStore.listByProject(id);
     for (const todo of todos) {
-      todo.projectId = this.inboxId;
+      this.todoStore.updateProjectId(todo.id, this.inboxId);
     }
 
     this.projects.delete(id);

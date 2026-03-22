@@ -57,4 +57,28 @@ describe("TodoStore", () => {
     store.add("Task A", "proj-1");
     expect(store.listByProject("proj-999")).toEqual([]);
   });
+
+  describe("updateProjectId()", () => {
+    it("updates the projectId of an existing todo", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task", "proj-1");
+      const result = store.updateProjectId(todo.id, "proj-2");
+      expect(result).toBeDefined();
+      expect(result!.projectId).toBe("proj-2");
+      expect(store.get(todo.id)!.projectId).toBe("proj-2");
+    });
+
+    it("returns undefined for a non-existent todo", () => {
+      const store = new TodoStore();
+      const result = store.updateProjectId("no-such-id", "proj-1");
+      expect(result).toBeUndefined();
+    });
+
+    it("can clear projectId by setting undefined", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task", "proj-1");
+      const result = store.updateProjectId(todo.id, undefined);
+      expect(result!.projectId).toBeUndefined();
+    });
+  });
 });
