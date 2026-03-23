@@ -32,8 +32,13 @@ describe("TodoStore", () => {
   it("deletes a todo", () => {
     const store = new TodoStore();
     const todo = store.add("Delete me");
-    expect(store.delete(todo.id)).toBe(true);
+    store.delete(todo.id);
     expect(store.get(todo.id)).toBeUndefined();
+  });
+
+  it("delete() throws when the todo ID does not exist", () => {
+    const store = new TodoStore();
+    expect(() => store.delete("unknown-id")).toThrowError("Todo not found");
   });
 
   it("add() does not accept a projectId parameter", () => {
