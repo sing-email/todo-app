@@ -9,6 +9,16 @@ describe("TodoStore", () => {
     expect(todo.completed).toBe(false);
   });
 
+  it("sets createdAt to an ISO 8601 string on new todos", () => {
+    const before = new Date().toISOString();
+    const store = new TodoStore();
+    const todo = store.add("Timestamped task");
+    const after = new Date().toISOString();
+    expect(todo.createdAt).toBeDefined();
+    expect(todo.createdAt >= before).toBe(true);
+    expect(todo.createdAt <= after).toBe(true);
+  });
+
   it("lists todos", () => {
     const store = new TodoStore();
     store.add("A");
