@@ -51,6 +51,14 @@ export class ProjectStore {
     return this.todoStore.add(title, resolvedProjectId);
   }
 
+  list(): Project[] {
+    const inbox = this.projects.get(this.inboxId)!;
+    const rest = Array.from(this.projects.values()).filter(
+      (p) => p.id !== this.inboxId,
+    );
+    return [inbox, ...rest];
+  }
+
   delete(id: string): DeleteResult {
     if (id === this.inboxId) {
       throw new Error("Cannot delete the Inbox project");

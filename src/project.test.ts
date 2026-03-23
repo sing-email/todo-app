@@ -94,4 +94,55 @@ describe("ProjectStore", () => {
       );
     });
   });
+
+  describe("list", () => {
+    it("returns Inbox when no other projects exist", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      const projects = projectStore.list();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].id).toBe(projectStore.getInboxId());
+      expect(projects[0].name).toBe("Inbox");
+    });
+
+    it("returns all projects including Inbox", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+      const work = projectStore.add("Work");
+      const personal = projectStore.add("Personal");
+
+      const projects = projectStore.list();
+
+      expect(projects).toHaveLength(3);
+      const ids = projects.map((p) => p.id);
+      expect(ids).toContain(projectStore.getInboxId());
+      expect(ids).toContain(work.id);
+      expect(ids).toContain(personal.id);
+    });
+
+    it("always returns Inbox first", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+      projectStore.add("Alpha");
+      projectStore.add("Beta");
+
+      const projects = projectStore.list();
+
+      expect(projects[0].id).toBe(projectStore.getInboxId());
+      expect(projects[0].name).toBe("Inbox");
+    });
+
+    it("returns a new array on each call", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      const first = projectStore.list();
+      const second = projectStore.list();
+
+      expect(first).not.toBe(second);
+      expect(first).toEqual(second);
+    });
+  });
 });
