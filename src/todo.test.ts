@@ -29,4 +29,37 @@ describe("TodoStore", () => {
     expect(store.delete(todo.id)).toBe(true);
     expect(store.get(todo.id)).toBeUndefined();
   });
+
+  describe("moveToProject", () => {
+    it("moves a todo to a project", () => {
+      const store = new TodoStore();
+      const todo = store.add("Buy milk");
+      const result = store.moveToProject(todo.id, "project-1");
+      expect(result.projectId).toBe("project-1");
+      expect(store.get(todo.id)?.projectId).toBe("project-1");
+    });
+
+    it("re-assigns a todo to a different project", () => {
+      const store = new TodoStore();
+      const todo = store.add("Buy milk");
+      store.moveToProject(todo.id, "project-1");
+      const result = store.moveToProject(todo.id, "project-2");
+      expect(result.projectId).toBe("project-2");
+    });
+
+    it("throws when projectId is an empty string", () => {
+      const store = new TodoStore();
+      const todo = store.add("Buy milk");
+      expect(() => store.moveToProject(todo.id, "")).toThrow(
+        "projectId must not be empty",
+      );
+    });
+
+    it("throws when moving a non-existent todo", () => {
+      const store = new TodoStore();
+      expect(() => store.moveToProject("no-such-id", "project-1")).toThrow(
+        "Todo not found: no-such-id",
+      );
+    });
+  });
 });

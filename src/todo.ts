@@ -3,6 +3,7 @@ export interface Todo {
   title: string;
   completed: boolean;
   createdAt: string;
+  projectId?: string;
 }
 
 export class TodoStore {
@@ -38,5 +39,17 @@ export class TodoStore {
 
   delete(id: string): boolean {
     return this.todos.delete(id);
+  }
+
+  moveToProject(id: string, projectId: string): Todo {
+    if (!projectId) {
+      throw new Error("projectId must not be empty");
+    }
+    const todo = this.todos.get(id);
+    if (!todo) {
+      throw new Error(`Todo not found: ${id}`);
+    }
+    todo.projectId = projectId;
+    return todo;
   }
 }
