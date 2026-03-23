@@ -49,7 +49,7 @@ export class ProjectStore {
       throw new Error("Project not found");
     }
     const todo = this.todoStore.add(title);
-    todo.projectId = resolvedProjectId;
+    this.todoStore.assignToProject(todo.id, resolvedProjectId);
     return todo;
   }
 
@@ -73,7 +73,7 @@ export class ProjectStore {
 
     const todos = this.todoStore.listByProject(id);
     for (const todo of todos) {
-      todo.projectId = this.inboxId;
+      this.todoStore.assignToProject(todo.id, this.inboxId);
     }
 
     this.projects.delete(id);

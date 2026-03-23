@@ -39,11 +39,11 @@ describe("TodoStore", () => {
   it("listByProject() returns only todos matching the given projectId", () => {
     const store = new TodoStore();
     const todoA = store.add("Task A");
-    todoA.projectId = "proj-1";
+    store.assignToProject(todoA.id, "proj-1");
     const todoB = store.add("Task B");
-    todoB.projectId = "proj-2";
+    store.assignToProject(todoB.id, "proj-2");
     const todoC = store.add("Task C");
-    todoC.projectId = "proj-1";
+    store.assignToProject(todoC.id, "proj-1");
     const result = store.listByProject("proj-1");
     expect(result).toHaveLength(2);
     expect(result.map((t) => t.title).sort()).toEqual(["Task A", "Task C"]);
@@ -52,7 +52,24 @@ describe("TodoStore", () => {
   it("listByProject() returns empty array when no todos match", () => {
     const store = new TodoStore();
     const todo = store.add("Task A");
-    todo.projectId = "proj-1";
+    store.assignToProject(todo.id, "proj-1");
     expect(store.listByProject("proj-999")).toEqual([]);
+  });
+
+  describe("assignToProject", () => {
+    it("sets the projectId on an existing todo", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task A");
+      const result = store.assignToProject(todo.id, "proj-1");
+      expect(result.projectId).toBe("proj-1");
+      expect(store.get(todo.id)?.projectId).toBe("proj-1");
+    });
+
+    it("throws when the todoId does not exist", () => {
+      const store = new TodoStore();
+      expect(() => store.assignToProject("unknown-id", "proj-1")).toThrowError(
+        "Todo not found",
+      );
+    });
   });
 });
