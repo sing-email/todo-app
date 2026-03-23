@@ -3,19 +3,21 @@ import { TodoStore } from "./todo.js";
 
 export function createApp(todoStore: TodoStore): http.Server {
   return http.createServer((req, res) => {
-    if (req.method === "GET" && req.url === "/health") {
+    const { pathname } = new URL(req.url ?? "/", "http://localhost");
+
+    if (req.method === "GET" && pathname === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok" }));
       return;
     }
 
-    if (req.method === "GET" && req.url === "/todos") {
+    if (req.method === "GET" && pathname === "/todos") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(todoStore.list()));
       return;
     }
 
-    if (req.method === "POST" && req.url === "/todos") {
+    if (req.method === "POST" && pathname === "/todos") {
       let body = "";
       req.on("data", (chunk) => (body += chunk));
       req.on("end", () => {
@@ -39,8 +41,9 @@ export function createApp(todoStore: TodoStore): http.Server {
       return;
     }
 
-    if (req.method === "DELETE" && req.url?.startsWith("/todos/")) {
-      const id = req.url.slice("/todos/".length);
+    const todoSegments = pathname.match(/^\/todos\/([^/]+)$/);
+    if (req.method === "DELETE" && todoSegments) {
+      const id = decodeURIComponent(todoSegments[1]);
       try {
         todoStore.delete(id);
         res.writeHead(204);

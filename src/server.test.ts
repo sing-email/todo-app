@@ -132,6 +132,41 @@ describe("DELETE /todos/:id", () => {
     expect(res.status).toBe(404);
     expect(JSON.parse(res.body)).toEqual({ error: "Todo not found" });
   });
+
+  it("strips query string when extracting ID", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Query test" },
+    });
+    const todo = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${todo.id}?foo=bar`, { method: "DELETE" });
+    expect(res.status).toBe(204);
+
+    const listRes = await request(server, "/todos");
+    expect(JSON.parse(listRes.body)).toEqual([]);
+  });
+
+  it("returns 404 for extra path segments", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Segment test" },
+    });
+    const todo = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${todo.id}/extra`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for trailing slash with no ID", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos/", { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("GET /todos", () => {
