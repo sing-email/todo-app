@@ -1,6 +1,8 @@
 import http from "node:http";
 import { TodoStore } from "./todo.js";
 
+const MAX_BODY_BYTES = 1_048_576; // 1 MB
+
 export function createApp(todoStore: TodoStore): http.Server {
   return http.createServer((req, res) => {
     if (req.method === "GET" && req.url === "/health") {
@@ -17,8 +19,19 @@ export function createApp(todoStore: TodoStore): http.Server {
 
     if (req.method === "POST" && req.url === "/todos") {
       let body = "";
-      req.on("data", (chunk) => (body += chunk));
+      let bytes = 0;
+      req.on("data", (chunk: Buffer) => {
+        bytes += chunk.length;
+        if (bytes > MAX_BODY_BYTES) {
+          res.writeHead(413, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Payload Too Large" }));
+          req.destroy();
+          return;
+        }
+        body += chunk;
+      });
       req.on("end", () => {
+        if (bytes > MAX_BODY_BYTES) return;
         try {
           const parsed = JSON.parse(body);
           if (typeof parsed.title !== "string" || parsed.title.length === 0) {

@@ -6,13 +6,13 @@ import { TodoStore } from "./todo.js";
 function request(
   server: http.Server,
   path: string,
-  options?: { method?: string; body?: unknown },
+  options?: { method?: string; body?: unknown; rawBody?: string },
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const addr = server.address();
     if (!addr || typeof addr === "string") return reject(new Error("no address"));
     const method = options?.method ?? "GET";
-    const reqBody = options?.body !== undefined ? JSON.stringify(options.body) : undefined;
+    const reqBody = options?.rawBody ?? (options?.body !== undefined ? JSON.stringify(options.body) : undefined);
     const req = http.request(
       {
         hostname: "127.0.0.1",
@@ -92,6 +92,17 @@ describe("POST /todos", () => {
     expect(res.status).toBe(201);
     const todo = JSON.parse(res.body);
     expect(todo.title).toBe("Buy milk");
+  });
+
+  it("returns 413 when body exceeds 1 MB", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const oversized = "x".repeat(1_048_577);
+    const res = await request(server, "/todos", {
+      method: "POST",
+      rawBody: oversized,
+    });
+    expect(res.status).toBe(413);
+    expect(JSON.parse(res.body)).toEqual({ error: "Payload Too Large" });
   });
 
   it("returns 400 when title is missing", async () => {
