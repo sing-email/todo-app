@@ -74,6 +74,26 @@ describe("POST /todos", () => {
     expect(todo.createdAt).toEqual(expect.any(String));
   });
 
+  it("returns 400 when title is whitespace-only", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "   " },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("trims whitespace from title before storing", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "  Buy milk  " },
+    });
+    expect(res.status).toBe(201);
+    const todo = JSON.parse(res.body);
+    expect(todo.title).toBe("Buy milk");
+  });
+
   it("returns 400 when title is missing", async () => {
     server = createApp(new TodoStore()).listen(0);
     const res = await request(server, "/todos", {

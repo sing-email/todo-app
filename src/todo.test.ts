@@ -51,6 +51,26 @@ describe("TodoStore", () => {
     expect(() => store.delete("unknown-id")).toThrowError("Todo not found");
   });
 
+  it("add() trims whitespace from title before storing", () => {
+    const store = new TodoStore();
+    const todo = store.add("  Buy milk  ");
+    expect(todo.title).toBe("Buy milk");
+  });
+
+  it("add() throws when title is empty after trimming", () => {
+    const store = new TodoStore();
+    expect(() => store.add("   ")).toThrowError(
+      "Todo title must be a non-empty string",
+    );
+  });
+
+  it("add() throws when title is empty string", () => {
+    const store = new TodoStore();
+    expect(() => store.add("")).toThrowError(
+      "Todo title must be a non-empty string",
+    );
+  });
+
   it("add() does not accept a projectId parameter", () => {
     const store = new TodoStore();
     const todo = store.add("Inbox task");

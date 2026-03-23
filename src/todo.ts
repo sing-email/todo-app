@@ -10,6 +10,10 @@ export class TodoStore {
   private todos: Map<string, Todo> = new Map();
 
   add(title: string): Todo {
+    title = title.trim();
+    if (!title) {
+      throw new Error("Todo title must be a non-empty string");
+    }
     const id = crypto.randomUUID();
     const todo: Todo = {
       id,

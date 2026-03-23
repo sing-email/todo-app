@@ -29,9 +29,11 @@ export function createApp(todoStore: TodoStore): http.Server {
           const todo = todoStore.add(parsed.title);
           res.writeHead(201, { "Content-Type": "application/json" });
           res.end(JSON.stringify(todo));
-        } catch {
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Invalid JSON";
           res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Invalid JSON" }));
+          res.end(JSON.stringify({ error: message }));
         }
       });
       return;
