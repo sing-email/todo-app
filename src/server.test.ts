@@ -104,6 +104,36 @@ describe("POST /todos", () => {
   });
 });
 
+describe("DELETE /todos/:id", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 204 when todo exists", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "To delete" },
+    });
+    const todo = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${todo.id}`, { method: "DELETE" });
+    expect(res.status).toBe(204);
+    expect(res.body).toBe("");
+
+    const listRes = await request(server, "/todos");
+    expect(JSON.parse(listRes.body)).toEqual([]);
+  });
+
+  it("returns 404 when todo does not exist", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos/nonexistent-id", { method: "DELETE" });
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Todo not found" });
+  });
+});
+
 describe("GET /todos", () => {
   let server: http.Server;
 
