@@ -32,6 +32,17 @@ export class ProjectStore {
   }
 
   add(name: string): Project {
+    if (!name || !name.trim()) {
+      throw new Error("Project name must be a non-empty string");
+    }
+
+    const duplicate = Array.from(this.projects.values()).some(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (duplicate) {
+      throw new Error(`Project name "${name}" already exists`);
+    }
+
     return this.createProject(name);
   }
 

@@ -95,6 +95,63 @@ describe("ProjectStore", () => {
     });
   });
 
+  describe("add", () => {
+    it("creates a project with the given name and returns the full object", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      const project = projectStore.add("Work");
+
+      expect(project.id).toBeDefined();
+      expect(project.name).toBe("Work");
+      expect(project.createdAt).toBeDefined();
+      expect(projectStore.get(project.id)).toEqual(project);
+    });
+
+    it("rejects an empty name", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("")).toThrowError(
+        "Project name must be a non-empty string",
+      );
+    });
+
+    it("rejects a whitespace-only name", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("   ")).toThrowError(
+        "Project name must be a non-empty string",
+      );
+    });
+
+    it("rejects duplicate project names (case-insensitive)", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+      projectStore.add("Work");
+
+      expect(() => projectStore.add("work")).toThrowError(
+        'Project name "work" already exists',
+      );
+      expect(() => projectStore.add("WORK")).toThrowError(
+        'Project name "WORK" already exists',
+      );
+    });
+
+    it("rejects creating a project named Inbox (case-insensitive)", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      expect(() => projectStore.add("Inbox")).toThrowError(
+        'Project name "Inbox" already exists',
+      );
+      expect(() => projectStore.add("inbox")).toThrowError(
+        'Project name "inbox" already exists',
+      );
+    });
+  });
+
   describe("list", () => {
     it("returns Inbox when no other projects exist", () => {
       const todoStore = new TodoStore();
