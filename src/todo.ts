@@ -9,14 +9,13 @@ export interface Todo {
 export class TodoStore {
   private todos: Map<string, Todo> = new Map();
 
-  add(title: string, projectId?: string): Todo {
+  add(title: string): Todo {
     const id = crypto.randomUUID();
     const todo: Todo = {
       id,
       title,
       completed: false,
       createdAt: new Date().toISOString(),
-      projectId,
     };
     this.todos.set(id, todo);
     return todo;

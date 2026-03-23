@@ -48,7 +48,9 @@ export class ProjectStore {
     if (!this.projects.has(resolvedProjectId)) {
       throw new Error("Project not found");
     }
-    return this.todoStore.add(title, resolvedProjectId);
+    const todo = this.todoStore.add(title);
+    todo.projectId = resolvedProjectId;
+    return todo;
   }
 
   list(): Project[] {
