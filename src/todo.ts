@@ -53,7 +53,11 @@ export class TodoStore {
     return todo;
   }
 
-  delete(id: string): boolean {
-    return this.todos.delete(id);
+  delete(id: string): void {
+    const todo = this.todos.get(id);
+    if (!todo) {
+      throw new Error("Todo not found");
+    }
+    this.todos.delete(id);
   }
 }
