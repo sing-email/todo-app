@@ -139,6 +139,20 @@ describe("ProjectStore", () => {
       );
     });
 
+    it("trims whitespace from name before validation and storage", () => {
+      const todoStore = new TodoStore();
+      const projectStore = new ProjectStore(todoStore);
+
+      const project = projectStore.add("  Work  ");
+
+      expect(project.name).toBe("Work");
+
+      // Duplicate detection should work against the trimmed name
+      expect(() => projectStore.add("Work")).toThrowError(
+        'Project name "Work" already exists',
+      );
+    });
+
     it("rejects creating a project named Inbox (case-insensitive)", () => {
       const todoStore = new TodoStore();
       const projectStore = new ProjectStore(todoStore);

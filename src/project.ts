@@ -32,7 +32,8 @@ export class ProjectStore {
   }
 
   add(name: string): Project {
-    if (!name || !name.trim()) {
+    name = name.trim();
+    if (!name) {
       throw new Error("Project name must be a non-empty string");
     }
 
