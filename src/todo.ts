@@ -43,6 +43,15 @@ export class TodoStore {
     return todo;
   }
 
+  assignToProject(todoId: string, projectId: string): Todo {
+    const todo = this.todos.get(todoId);
+    if (!todo) {
+      throw new Error("Todo not found");
+    }
+    todo.projectId = projectId;
+    return todo;
+  }
+
   delete(id: string): boolean {
     return this.todos.delete(id);
   }
