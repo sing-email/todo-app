@@ -1,4 +1,4 @@
-import { TodoStore } from "./todo.js";
+import { Todo, TodoStore } from "./todo.js";
 
 export interface Project {
   id: string;
@@ -41,6 +41,14 @@ export class ProjectStore {
 
   getInboxId(): string {
     return this.inboxId;
+  }
+
+  createTodo(title: string, projectId?: string): Todo {
+    const resolvedProjectId = projectId ?? this.inboxId;
+    if (!this.projects.has(resolvedProjectId)) {
+      throw new Error("Project not found");
+    }
+    return this.todoStore.add(title, resolvedProjectId);
   }
 
   delete(id: string): DeleteResult {
