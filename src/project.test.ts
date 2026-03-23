@@ -48,8 +48,8 @@ describe("ProjectStore", () => {
       const projectStore = new ProjectStore(todoStore);
       const project = projectStore.add("Work");
 
-      const todo1 = todoStore.add("Task A", project.id);
-      const todo2 = todoStore.add("Task B", project.id);
+      const todo1 = projectStore.createTodo("Task A", project.id);
+      const todo2 = projectStore.createTodo("Task B", project.id);
 
       const result = projectStore.delete(project.id);
 
