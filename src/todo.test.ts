@@ -19,8 +19,14 @@ describe("TodoStore", () => {
   it("completes a todo", () => {
     const store = new TodoStore();
     const todo = store.add("Test");
-    store.complete(todo.id);
+    const result = store.complete(todo.id);
+    expect(result.completed).toBe(true);
     expect(store.get(todo.id)?.completed).toBe(true);
+  });
+
+  it("complete() throws when the todo ID does not exist", () => {
+    const store = new TodoStore();
+    expect(() => store.complete("unknown-id")).toThrowError("Todo not found");
   });
 
   it("deletes a todo", () => {

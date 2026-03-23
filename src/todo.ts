@@ -35,11 +35,12 @@ export class TodoStore {
     return Array.from(this.todos.values());
   }
 
-  complete(id: string): Todo | undefined {
+  complete(id: string): Todo {
     const todo = this.todos.get(id);
-    if (todo) {
-      todo.completed = true;
+    if (!todo) {
+      throw new Error("Todo not found");
     }
+    todo.completed = true;
     return todo;
   }
 
