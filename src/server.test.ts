@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import http from "node:http";
 import { createApp } from "./server.js";
 import { TodoStore } from "./todo.js";
@@ -37,6 +37,38 @@ function request(
     req.end();
   });
 }
+
+describe("request logging", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("logs method and path to stdout for each request", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    server = createApp(new TodoStore()).listen(0);
+
+    await request(server, "/health");
+    expect(logSpy).toHaveBeenCalledWith("GET /health");
+
+    await request(server, "/todos", { method: "POST", body: { title: "Test" } });
+    expect(logSpy).toHaveBeenCalledWith("POST /todos");
+
+    await request(server, "/todos");
+    expect(logSpy).toHaveBeenCalledWith("GET /todos");
+
+    logSpy.mockRestore();
+  });
+
+  it("logs method and path for unknown routes", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    server = createApp(new TodoStore()).listen(0);
+
+    await request(server, "/unknown");
+    expect(logSpy).toHaveBeenCalledWith("GET /unknown");
+
+    logSpy.mockRestore();
+  });
+});
 
 describe("GET /health", () => {
   let server: http.Server;
