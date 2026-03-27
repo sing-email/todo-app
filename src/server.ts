@@ -3,6 +3,8 @@ import { TodoStore } from "./todo.js";
 
 export function createApp(todoStore: TodoStore): http.Server {
   return http.createServer((req, res) => {
+    console.log(`${req.method} ${req.url}`);
+
     const { pathname } = new URL(req.url ?? "/", "http://localhost");
 
     if (req.method === "GET" && pathname === "/health") {
