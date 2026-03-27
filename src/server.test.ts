@@ -50,6 +50,12 @@ describe("GET /health", () => {
     expect(res.headers["content-type"]).toMatch(/application\/json/);
     expect(JSON.parse(res.body)).toEqual({ status: "ok" });
   });
+
+  it("returns 404 for POST /health", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/health", { method: "POST" });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /todos", () => {
