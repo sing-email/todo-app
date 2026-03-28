@@ -1,8 +1,20 @@
 import http from "node:http";
 import { TodoStore } from "./todo.js";
 
-export function createApp(todoStore: TodoStore): http.Server {
+export interface AppOptions {
+  version?: string;
+}
+
+export function createApp(todoStore: TodoStore, options?: AppOptions): http.Server {
+  const version = options?.version ?? "unknown";
+
   return http.createServer((req, res) => {
+    if (req.method === "GET" && req.url === "/version") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ version }));
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok" }));

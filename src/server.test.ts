@@ -38,6 +38,20 @@ function request(
   });
 }
 
+describe("GET /version", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 200 with JSON containing a version field", async () => {
+    server = createApp(new TodoStore(), { version: "1.2.3" }).listen(0);
+    const res = await request(server, "/version");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    expect(JSON.parse(res.body)).toEqual({ version: "1.2.3" });
+  });
+});
+
 describe("GET /health", () => {
   let server: http.Server;
 
