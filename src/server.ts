@@ -48,8 +48,8 @@ export function createApp(todoStore: TodoStore): http.Server {
       const id = decodeURIComponent(todoSegments[1]);
       try {
         todoStore.delete(id);
-        res.writeHead(204);
-        res.end();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
       } catch {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Todo not found" }));

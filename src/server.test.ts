@@ -147,7 +147,7 @@ describe("DELETE /todos/:id", () => {
 
   afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
-  it("returns 204 when todo exists", async () => {
+  it("returns 200 when todo exists", async () => {
     const store = new TodoStore();
     server = createApp(store).listen(0);
     const createRes = await request(server, "/todos", {
@@ -157,8 +157,7 @@ describe("DELETE /todos/:id", () => {
     const todo = JSON.parse(createRes.body);
 
     const res = await request(server, `/todos/${todo.id}`, { method: "DELETE" });
-    expect(res.status).toBe(204);
-    expect(res.body).toBe("");
+    expect(res.status).toBe(200);
 
     const listRes = await request(server, "/todos");
     expect(JSON.parse(listRes.body)).toEqual([]);
