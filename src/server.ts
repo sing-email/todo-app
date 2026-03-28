@@ -39,6 +39,19 @@ export function createApp(todoStore: TodoStore): http.Server {
       return;
     }
 
+    if (req.method === "GET" && req.url?.startsWith("/todos/")) {
+      const id = req.url.slice("/todos/".length);
+      const todo = todoStore.get(id);
+      if (todo) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(todo));
+      } else {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Todo not found" }));
+      }
+      return;
+    }
+
     if (req.method === "DELETE" && req.url?.startsWith("/todos/")) {
       const id = req.url.slice("/todos/".length);
       try {
