@@ -97,6 +97,48 @@ describe("TodoStore", () => {
     expect(store.listByProject("proj-999")).toEqual([]);
   });
 
+  describe("update", () => {
+    it("updates the title of an existing todo", () => {
+      const store = new TodoStore();
+      const todo = store.add("Original");
+      const updated = store.update(todo.id, "Updated");
+      expect(updated.title).toBe("Updated");
+      expect(store.get(todo.id)?.title).toBe("Updated");
+    });
+
+    it("trims whitespace from the new title", () => {
+      const store = new TodoStore();
+      const todo = store.add("Original");
+      const updated = store.update(todo.id, "  Trimmed  ");
+      expect(updated.title).toBe("Trimmed");
+    });
+
+    it("throws when the todo ID does not exist", () => {
+      const store = new TodoStore();
+      expect(() => store.update("unknown-id", "New title")).toThrowError(
+        "Todo not found",
+      );
+    });
+
+    it("throws when the new title is empty after trimming", () => {
+      const store = new TodoStore();
+      const todo = store.add("Original");
+      expect(() => store.update(todo.id, "   ")).toThrowError(
+        "Todo title must be a non-empty string",
+      );
+    });
+
+    it("preserves other fields when updating title", () => {
+      const store = new TodoStore();
+      const todo = store.add("Original");
+      store.complete(todo.id);
+      const updated = store.update(todo.id, "Updated");
+      expect(updated.completed).toBe(true);
+      expect(updated.id).toBe(todo.id);
+      expect(updated.createdAt).toBe(todo.createdAt);
+    });
+  });
+
   describe("assignToProject", () => {
     it("sets the projectId on an existing todo", () => {
       const store = new TodoStore();
