@@ -1,8 +1,19 @@
+import fs from "node:fs";
 import http from "node:http";
 import { TodoStore } from "./todo.js";
 
+const { version } = JSON.parse(
+  fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+) as { version: string };
+
 export function createApp(todoStore: TodoStore): http.Server {
   return http.createServer((req, res) => {
+    if (req.method === "GET" && req.url === "/version") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ version }));
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok" }));
