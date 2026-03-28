@@ -38,6 +38,23 @@ function request(
   });
 }
 
+describe("GET /version", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 200 with a version field", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/version");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const body = JSON.parse(res.body);
+    expect(body).toHaveProperty("version");
+    expect(typeof body.version).toBe("string");
+    expect(body.version.length).toBeGreaterThan(0);
+  });
+});
+
 describe("GET /health", () => {
   let server: http.Server;
 
