@@ -7,6 +7,7 @@ describe("TodoStore", () => {
     const todo = store.add("Buy milk");
     expect(todo.title).toBe("Buy milk");
     expect(todo.completed).toBe(false);
+    expect(todo.tags).toEqual([]);
   });
 
   it("sets createdAt to an ISO 8601 string on new todos", () => {
@@ -159,6 +160,31 @@ describe("TodoStore", () => {
       const store = new TodoStore();
       expect(() => store.setCompleted("unknown-id", true)).toThrowError(
         "Todo not found",
+      );
+    });
+  });
+
+  describe("addTag", () => {
+    it("adds a tag to a todo", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task");
+      const result = store.addTag(todo.id, "urgent");
+      expect(result.tags).toEqual(["urgent"]);
+    });
+
+    it("throws when the todo ID does not exist", () => {
+      const store = new TodoStore();
+      expect(() => store.addTag("unknown-id", "urgent")).toThrowError(
+        "Todo not found",
+      );
+    });
+
+    it("throws when the tag already exists", () => {
+      const store = new TodoStore();
+      const todo = store.add("Task");
+      store.addTag(todo.id, "urgent");
+      expect(() => store.addTag(todo.id, "urgent")).toThrowError(
+        "Tag already exists",
       );
     });
   });

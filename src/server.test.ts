@@ -451,3 +451,103 @@ describe("GET /todos", () => {
     expect(todos[0].title).toBe("Walk the dog");
   });
 });
+
+describe("POST /todos/:id/tags", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("AC1: adds a tag to a todo and returns 200 with tags array", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Buy milk" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}/tags`, {
+      method: "POST",
+      body: { tag: "urgent" },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const updated = JSON.parse(res.body);
+    expect(updated.id).toBe(created.id);
+    expect(updated.tags).toEqual(["urgent"]);
+  });
+
+  it("AC2: adds multiple tags accumulating in the array", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Buy milk" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    await request(server, `/todos/${created.id}/tags`, {
+      method: "POST",
+      body: { tag: "urgent" },
+    });
+
+    const res = await request(server, `/todos/${created.id}/tags`, {
+      method: "POST",
+      body: { tag: "work" },
+    });
+    expect(res.status).toBe(200);
+    const updated = JSON.parse(res.body);
+    expect(updated.tags).toEqual(["urgent", "work"]);
+  });
+
+  it("AC3: rejects duplicate tag with 409", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Buy milk" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    await request(server, `/todos/${created.id}/tags`, {
+      method: "POST",
+      body: { tag: "urgent" },
+    });
+
+    const res = await request(server, `/todos/${created.id}/tags`, {
+      method: "POST",
+      body: { tag: "urgent" },
+    });
+    expect(res.status).toBe(409);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC4: returns 404 when todo does not exist", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos/nonexistent/tags", {
+      method: "POST",
+      body: { tag: "urgent" },
+    });
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Todo not found" });
+  });
+
+  it("AC5: returns 400 when tag field is missing", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Buy milk" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}/tags`, {
+      method: "POST",
+      body: {},
+    });
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+});
