@@ -48,6 +48,15 @@ export class TodoStore {
     return todo;
   }
 
+  setCompleted(id: string, completed: boolean): Todo {
+    const todo = this.todos.get(id);
+    if (!todo) {
+      throw new Error("Todo not found");
+    }
+    todo.completed = completed;
+    return todo;
+  }
+
   assignToProject(todoId: string, projectId: string): Todo {
     const todo = this.todos.get(todoId);
     if (!todo) {

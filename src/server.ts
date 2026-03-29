@@ -56,6 +56,37 @@ export function createApp(todoStore: TodoStore): http.Server {
       return;
     }
 
+    const completeSegments = pathname.match(/^\/todos\/([^/]+)\/complete$/);
+    if (req.method === "PATCH" && completeSegments) {
+      const id = decodeURIComponent(completeSegments[1]);
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        try {
+          const parsed = JSON.parse(body);
+          if (typeof parsed.completed !== "boolean") {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "completed is required" }));
+            return;
+          }
+          const todo = todoStore.setCompleted(id, parsed.completed);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(todo));
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Invalid JSON";
+          if (message === "Todo not found") {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: message }));
+          } else {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: message }));
+          }
+        }
+      });
+      return;
+    }
+
     const todoSegments = pathname.match(/^\/todos\/([^/]+)$/);
     if (req.method === "GET" && todoSegments) {
       const id = decodeURIComponent(todoSegments[1]);

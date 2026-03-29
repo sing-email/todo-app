@@ -137,6 +137,32 @@ describe("TodoStore", () => {
     });
   });
 
+  describe("setCompleted", () => {
+    it("marks a todo as completed", () => {
+      const store = new TodoStore();
+      const todo = store.add("Test");
+      const result = store.setCompleted(todo.id, true);
+      expect(result.completed).toBe(true);
+      expect(store.get(todo.id)?.completed).toBe(true);
+    });
+
+    it("marks a completed todo as incomplete", () => {
+      const store = new TodoStore();
+      const todo = store.add("Test");
+      store.setCompleted(todo.id, true);
+      const result = store.setCompleted(todo.id, false);
+      expect(result.completed).toBe(false);
+      expect(store.get(todo.id)?.completed).toBe(false);
+    });
+
+    it("throws when the todo ID does not exist", () => {
+      const store = new TodoStore();
+      expect(() => store.setCompleted("unknown-id", true)).toThrowError(
+        "Todo not found",
+      );
+    });
+  });
+
   describe("assignToProject", () => {
     it("sets the projectId on an existing todo", () => {
       const store = new TodoStore();
