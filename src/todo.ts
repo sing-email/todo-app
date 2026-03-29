@@ -57,6 +57,19 @@ export class TodoStore {
     return todo;
   }
 
+  updateTitle(id: string, title: string): Todo {
+    const todo = this.todos.get(id);
+    if (!todo) {
+      throw new Error("Todo not found");
+    }
+    title = title.trim();
+    if (!title) {
+      throw new Error("Todo title must be a non-empty string");
+    }
+    todo.title = title;
+    return todo;
+  }
+
   delete(id: string): void {
     const todo = this.todos.get(id);
     if (!todo) {
