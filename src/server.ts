@@ -1,11 +1,24 @@
 import http from "node:http";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { TodoStore } from "./todo.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8"));
+const appVersion: string = pkg.version;
 
 export function createApp(todoStore: TodoStore): http.Server {
   return http.createServer((req, res) => {
     console.log(`${req.method} ${req.url}`);
 
     const { pathname } = new URL(req.url ?? "/", "http://localhost");
+
+    if (req.method === "GET" && pathname === "/version") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ version: appVersion }));
+      return;
+    }
 
     if (req.method === "GET" && pathname === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
