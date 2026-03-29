@@ -234,6 +234,93 @@ describe("GET /todos/:id", () => {
   });
 });
 
+describe("PUT /todos/:id", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 200 with the updated todo", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Old title" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}`, {
+      method: "PUT",
+      body: { title: "New title" },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const updated = JSON.parse(res.body);
+    expect(updated.title).toBe("New title");
+    expect(updated.id).toBe(created.id);
+    expect(updated.completed).toBe(false);
+  });
+
+  it("returns 404 when todo does not exist", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos/nonexistent-id", {
+      method: "PUT",
+      body: { title: "New title" },
+    });
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Todo not found" });
+  });
+
+  it("returns 400 when title is missing", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Old title" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}`, {
+      method: "PUT",
+      body: {},
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.parse(res.body)).toEqual({ error: "title is required" });
+  });
+
+  it("returns 400 when title is empty string", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Old title" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}`, {
+      method: "PUT",
+      body: { title: "" },
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.parse(res.body)).toEqual({ error: "title is required" });
+  });
+
+  it("returns 400 when title is whitespace-only", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Old title" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}`, {
+      method: "PUT",
+      body: { title: "   " },
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("GET /version", () => {
   let server: http.Server;
 
