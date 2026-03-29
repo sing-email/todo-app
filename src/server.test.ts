@@ -157,7 +157,7 @@ describe("DELETE /todos/:id", () => {
     const todo = JSON.parse(createRes.body);
 
     const res = await request(server, `/todos/${todo.id}`, { method: "DELETE" });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
 
     const listRes = await request(server, "/todos");
     expect(JSON.parse(listRes.body)).toEqual([]);
