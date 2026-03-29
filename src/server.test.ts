@@ -206,6 +206,34 @@ describe("DELETE /todos/:id", () => {
   });
 });
 
+describe("GET /todos/:id", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 200 with the todo JSON when todo exists", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Fetch me" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    expect(JSON.parse(res.body)).toEqual(created);
+  });
+
+  it("returns 404 when todo does not exist", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos/nonexistent-id");
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Todo not found" });
+  });
+});
+
 describe("GET /version", () => {
   let server: http.Server;
 

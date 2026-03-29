@@ -57,6 +57,19 @@ export function createApp(todoStore: TodoStore): http.Server {
     }
 
     const todoSegments = pathname.match(/^\/todos\/([^/]+)$/);
+    if (req.method === "GET" && todoSegments) {
+      const id = decodeURIComponent(todoSegments[1]);
+      const todo = todoStore.get(id);
+      if (todo) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(todo));
+      } else {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Todo not found" }));
+      }
+      return;
+    }
+
     if (req.method === "DELETE" && todoSegments) {
       const id = decodeURIComponent(todoSegments[1]);
       try {
