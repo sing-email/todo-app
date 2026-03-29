@@ -4,6 +4,7 @@ export interface Todo {
   completed: boolean;
   createdAt: string;
   projectId?: string;
+  tags: string[];
 }
 
 export class TodoStore {
@@ -20,6 +21,7 @@ export class TodoStore {
       title,
       completed: false,
       createdAt: new Date().toISOString(),
+      tags: [],
     };
     this.todos.set(id, todo);
     return todo;
@@ -76,6 +78,18 @@ export class TodoStore {
       throw new Error("Todo title must be a non-empty string");
     }
     todo.title = title;
+    return todo;
+  }
+
+  addTag(id: string, tag: string): Todo {
+    const todo = this.todos.get(id);
+    if (!todo) {
+      throw new Error("Todo not found");
+    }
+    if (todo.tags.includes(tag)) {
+      throw new Error("Tag already exists");
+    }
+    todo.tags.push(tag);
     return todo;
   }
 

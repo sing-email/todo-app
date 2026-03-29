@@ -56,6 +56,40 @@ export function createApp(todoStore: TodoStore): http.Server {
       return;
     }
 
+    const tagsSegments = pathname.match(/^\/todos\/([^/]+)\/tags$/);
+    if (req.method === "POST" && tagsSegments) {
+      const id = decodeURIComponent(tagsSegments[1]);
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        try {
+          const parsed = JSON.parse(body);
+          if (typeof parsed.tag !== "string" || parsed.tag.length === 0) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "tag is required" }));
+            return;
+          }
+          const todo = todoStore.addTag(id, parsed.tag);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(todo));
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Invalid JSON";
+          if (message === "Todo not found") {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: message }));
+          } else if (message === "Tag already exists") {
+            res.writeHead(409, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: message }));
+          } else {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: message }));
+          }
+        }
+      });
+      return;
+    }
+
     const completeSegments = pathname.match(/^\/todos\/([^/]+)\/complete$/);
     if (req.method === "PATCH" && completeSegments) {
       const id = decodeURIComponent(completeSegments[1]);
