@@ -321,6 +321,92 @@ describe("PUT /todos/:id", () => {
   });
 });
 
+describe("PATCH /todos/:id/complete", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 200 and marks a todo as completed", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Mark me done" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}/complete`, {
+      method: "PATCH",
+      body: { completed: true },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const updated = JSON.parse(res.body);
+    expect(updated.id).toBe(created.id);
+    expect(updated.title).toBe("Mark me done");
+    expect(updated.completed).toBe(true);
+  });
+
+  it("returns 200 and marks a todo as incomplete", async () => {
+    const store = new TodoStore();
+    const todo = store.add("Already done");
+    store.setCompleted(todo.id, true);
+    server = createApp(store).listen(0);
+
+    const res = await request(server, `/todos/${todo.id}/complete`, {
+      method: "PATCH",
+      body: { completed: false },
+    });
+    expect(res.status).toBe(200);
+    const updated = JSON.parse(res.body);
+    expect(updated.completed).toBe(false);
+  });
+
+  it("returns 404 when todo does not exist", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos/nonexistent/complete", {
+      method: "PATCH",
+      body: { completed: true },
+    });
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Todo not found" });
+  });
+
+  it("returns 400 when completed field is missing", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Test" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}/complete`, {
+      method: "PATCH",
+      body: {},
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.parse(res.body)).toEqual({ error: "completed is required" });
+  });
+
+  it("returns 400 when completed field is not a boolean", async () => {
+    const store = new TodoStore();
+    server = createApp(store).listen(0);
+    const createRes = await request(server, "/todos", {
+      method: "POST",
+      body: { title: "Test" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/todos/${created.id}/complete`, {
+      method: "PATCH",
+      body: { completed: "yes" },
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.parse(res.body)).toEqual({ error: "completed is required" });
+  });
+});
+
 describe("GET /version", () => {
   let server: http.Server;
 
