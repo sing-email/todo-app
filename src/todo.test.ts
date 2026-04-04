@@ -205,4 +205,58 @@ describe("TodoStore", () => {
       );
     });
   });
+
+  describe("listPaginated", () => {
+    it("returns all items when total is less than limit", () => {
+      const store = new TodoStore();
+      store.add("A");
+      store.add("B");
+      const result = store.listPaginated(20);
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.hasMore).toBe(false);
+      expect(result.cursor).toBeNull();
+    });
+
+    it("paginates when total exceeds limit", () => {
+      const store = new TodoStore();
+      for (let i = 0; i < 5; i++) store.add(`Todo ${i}`);
+      const page1 = store.listPaginated(3);
+      expect(page1.items).toHaveLength(3);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.cursor).toEqual(expect.any(String));
+
+      const page2 = store.listPaginated(3, page1.cursor!);
+      expect(page2.items).toHaveLength(2);
+      expect(page2.hasMore).toBe(false);
+      expect(page2.cursor).toBeNull();
+    });
+
+    it("throws for cursor that decodes to non-numeric value", () => {
+      const store = new TodoStore();
+      expect(() => store.listPaginated(10, "not-valid")).toThrowError("Invalid cursor");
+    });
+
+    it("throws for cursor that decodes to a negative number", () => {
+      const store = new TodoStore();
+      const cursor = Buffer.from("-1").toString("base64url");
+      expect(() => store.listPaginated(10, cursor)).toThrowError("Invalid cursor");
+    });
+
+    it("throws for cursor that decodes to a non-integer", () => {
+      const store = new TodoStore();
+      const cursor = Buffer.from("abc").toString("base64url");
+      expect(() => store.listPaginated(10, cursor)).toThrowError("Invalid cursor");
+    });
+
+    it("returns empty items when cursor is past the end", () => {
+      const store = new TodoStore();
+      store.add("A");
+      const cursor = Buffer.from("100").toString("base64url");
+      const result = store.listPaginated(10, cursor);
+      expect(result.items).toHaveLength(0);
+      expect(result.hasMore).toBe(false);
+      expect(result.total).toBe(1);
+    });
+  });
 });

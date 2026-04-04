@@ -41,6 +41,32 @@ export class TodoStore {
     return Array.from(this.todos.values());
   }
 
+  listPaginated(limit: number, cursor?: string): { items: Todo[]; cursor: string | null; hasMore: boolean; total: number } {
+    const all = Array.from(this.todos.values());
+    const total = all.length;
+
+    let offset = 0;
+    if (cursor !== undefined) {
+      const decoded = Buffer.from(cursor, "base64url").toString("utf-8");
+      const parsed = Number(decoded);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        throw new Error("Invalid cursor");
+      }
+      offset = parsed;
+    }
+
+    const items = all.slice(offset, offset + limit);
+    const nextOffset = offset + limit;
+    const hasMore = nextOffset < total;
+
+    return {
+      items,
+      cursor: hasMore ? Buffer.from(String(nextOffset)).toString("base64url") : null,
+      hasMore,
+      total,
+    };
+  }
+
   complete(id: string): Todo {
     const todo = this.todos.get(id);
     if (!todo) {

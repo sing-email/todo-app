@@ -160,7 +160,7 @@ describe("DELETE /todos/:id", () => {
     expect(res.status).toBe(200);
 
     const listRes = await request(server, "/todos");
-    expect(JSON.parse(listRes.body)).toEqual([]);
+    expect(JSON.parse(listRes.body).items).toEqual([]);
   });
 
   it("returns 404 when todo does not exist", async () => {
@@ -183,7 +183,7 @@ describe("DELETE /todos/:id", () => {
     expect(res.status).toBe(200);
 
     const listRes = await request(server, "/todos");
-    expect(JSON.parse(listRes.body)).toEqual([]);
+    expect(JSON.parse(listRes.body).items).toEqual([]);
   });
 
   it("returns 404 for extra path segments", async () => {
@@ -429,26 +429,152 @@ describe("GET /todos", () => {
 
   afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
-  it("returns 200 with empty array when no todos exist", async () => {
-    server = createApp(new TodoStore()).listen(0);
+  it("AC1: returns a page of results with default limit of 20", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
     const res = await request(server, "/todos");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/application\/json/);
-    expect(JSON.parse(res.body)).toEqual([]);
+    const body = JSON.parse(res.body);
+    expect(body.items).toHaveLength(20);
   });
 
-  it("returns 200 with todos after creating one", async () => {
+  it("AC2: includes a cursor to fetch the next page", async () => {
     const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
     server = createApp(store).listen(0);
-    await request(server, "/todos", {
-      method: "POST",
-      body: { title: "Walk the dog" },
+    const res = await request(server, "/todos");
+    const body = JSON.parse(res.body);
+    expect(body.pagination.cursor).toEqual(expect.any(String));
+
+    // Use the cursor to fetch the next page
+    const res2 = await request(server, `/todos?cursor=${body.pagination.cursor}`);
+    const body2 = JSON.parse(res2.body);
+    expect(res2.status).toBe(200);
+    expect(body2.items).toHaveLength(5);
+    // No overlap between pages
+    const ids1 = body.items.map((t: { id: string }) => t.id);
+    const ids2 = body2.items.map((t: { id: string }) => t.id);
+    expect(ids1.filter((id: string) => ids2.includes(id))).toHaveLength(0);
+  });
+
+  it("AC3: tells me whether more pages exist", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const res1 = await request(server, "/todos");
+    const body1 = JSON.parse(res1.body);
+    expect(body1.pagination.hasMore).toBe(true);
+
+    const res2 = await request(server, `/todos?cursor=${body1.pagination.cursor}`);
+    const body2 = JSON.parse(res2.body);
+    expect(body2.pagination.hasMore).toBe(false);
+    expect(body2.pagination.cursor).toBeNull();
+  });
+
+  it("AC4: includes the total number of todos", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const res = await request(server, "/todos");
+    const body = JSON.parse(res.body);
+    expect(body.pagination.total).toBe(25);
+
+    // Total stays the same on subsequent pages
+    const res2 = await request(server, `/todos?cursor=${body.pagination.cursor}`);
+    const body2 = JSON.parse(res2.body);
+    expect(body2.pagination.total).toBe(25);
+  });
+
+  it("AC5: controls page size via limit query parameter", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 10; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const res = await request(server, "/todos?limit=3");
+    const body = JSON.parse(res.body);
+    expect(res.status).toBe(200);
+    expect(body.items).toHaveLength(3);
+    expect(body.pagination.hasMore).toBe(true);
+    expect(body.pagination.total).toBe(10);
+  });
+
+  it("AC6: returns 400 for non-numeric limit", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos?limit=abc");
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC6: returns 400 for zero limit", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos?limit=0");
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC6: returns 400 for negative limit", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos?limit=-5");
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC7: returns 400 for invalid cursor", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos?cursor=not-a-valid-cursor");
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC8: uses consistent envelope format with items and pagination", async () => {
+    const store = new TodoStore();
+    store.add("Test todo");
+    server = createApp(store).listen(0);
+
+    const res = await request(server, "/todos");
+    const body = JSON.parse(res.body);
+
+    // Envelope has exactly items and pagination keys
+    expect(Object.keys(body).sort()).toEqual(["items", "pagination"]);
+    // Pagination has exactly cursor, hasMore, total
+    expect(Object.keys(body.pagination).sort()).toEqual(["cursor", "hasMore", "total"]);
+    // Items contain todo objects
+    expect(body.items[0]).toMatchObject({
+      id: expect.any(String),
+      title: "Test todo",
+      completed: false,
+      createdAt: expect.any(String),
+      tags: [],
     });
+  });
+
+  it("returns empty items array when no todos exist", async () => {
+    server = createApp(new TodoStore()).listen(0);
     const res = await request(server, "/todos");
     expect(res.status).toBe(200);
-    const todos = JSON.parse(res.body);
-    expect(todos).toHaveLength(1);
-    expect(todos[0].title).toBe("Walk the dog");
+    const body = JSON.parse(res.body);
+    expect(body.items).toEqual([]);
+    expect(body.pagination.total).toBe(0);
+    expect(body.pagination.hasMore).toBe(false);
+    expect(body.pagination.cursor).toBeNull();
   });
 });
 
