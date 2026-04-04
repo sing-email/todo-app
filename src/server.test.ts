@@ -1082,3 +1082,95 @@ describe("DELETE /projects/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /projects/:id/todos", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("AC1: retrieves all todos belonging to a specific project", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const project = JSON.parse(createRes.body);
+
+    const todo1 = projectStore.createTodo("Task A", project.id);
+    const todo2 = projectStore.createTodo("Task B", project.id);
+    projectStore.createTodo("Inbox task"); // belongs to Inbox, not Work
+
+    const res = await request(server, `/projects/${project.id}/todos`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const todos = JSON.parse(res.body);
+    expect(Array.isArray(todos)).toBe(true);
+    expect(todos).toHaveLength(2);
+    const ids = todos.map((t: { id: string }) => t.id);
+    expect(ids).toContain(todo1.id);
+    expect(ids).toContain(todo2.id);
+  });
+
+  it("AC2: each todo includes the same fields as the main todo list", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const project = JSON.parse(createRes.body);
+
+    projectStore.createTodo("Task A", project.id);
+
+    const res = await request(server, `/projects/${project.id}/todos`);
+    const todos = JSON.parse(res.body);
+    expect(todos).toHaveLength(1);
+    expect(todos[0]).toMatchObject({
+      id: expect.any(String),
+      title: "Task A",
+      completed: false,
+      createdAt: expect.any(String),
+      tags: [],
+    });
+    expect(todos[0].projectId).toBe(project.id);
+  });
+
+  it("AC3: returns 404 with error message for a non-existent project", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects/nonexistent-id/todos");
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Project not found" });
+  });
+
+  it("AC4: returns an empty array for a project with no todos", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Empty Project" },
+    });
+    const project = JSON.parse(createRes.body);
+
+    const res = await request(server, `/projects/${project.id}/todos`);
+    expect(res.status).toBe(200);
+    const todos = JSON.parse(res.body);
+    expect(todos).toEqual([]);
+  });
+
+  it("returns 404 when no projectStore is configured", async () => {
+    server = createApp(new TodoStore()).listen(0);
+
+    const res = await request(server, "/projects/some-id/todos");
+    expect(res.status).toBe(404);
+  });
+});
