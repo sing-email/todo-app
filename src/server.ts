@@ -237,6 +237,20 @@ export function createApp(todoStore: TodoStore, projectStore?: ProjectStore): ht
       return;
     }
 
+    const projectSegments = pathname.match(/^\/projects\/([^/]+)$/);
+    if (req.method === "GET" && projectSegments && projectStore) {
+      const id = decodeURIComponent(projectSegments[1]);
+      const project = projectStore.get(id);
+      if (project) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(project));
+      } else {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Project not found" }));
+      }
+      return;
+    }
+
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Not Found" }));
   });
