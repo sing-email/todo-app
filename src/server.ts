@@ -251,6 +251,25 @@ export function createApp(todoStore: TodoStore, projectStore?: ProjectStore): ht
       return;
     }
 
+    if (req.method === "DELETE" && projectSegments && projectStore) {
+      const id = decodeURIComponent(projectSegments[1]);
+      try {
+        const result = projectStore.delete(id);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        if (message === "Cannot delete the Inbox project") {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: message }));
+        } else {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: message }));
+        }
+      }
+      return;
+    }
+
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Not Found" }));
   });
