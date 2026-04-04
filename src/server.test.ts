@@ -882,6 +882,105 @@ describe("GET /projects", () => {
   });
 });
 
+describe("GET /projects/:id", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("AC1: retrieves a project by its ID", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/projects/${created.id}`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+  });
+
+  it("AC2: response includes the project's ID and name", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/projects/${created.id}`);
+    const project = JSON.parse(res.body);
+    expect(project.id).toBe(created.id);
+    expect(project.name).toBe("Work");
+  });
+
+  it("AC3: returns 404 with error message for non-existent project", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects/non-existent-id");
+    expect(res.status).toBe(404);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+    expect(body.error).toMatch(/not found/i);
+  });
+
+  it("returns 404 when no projectStore is configured", async () => {
+    server = createApp(new TodoStore()).listen(0);
+
+    const res = await request(server, "/projects/some-id");
+    expect(res.status).toBe(404);
+  });
+
+  it("create → list → get-by-id lifecycle returns consistent data", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    // Create a project
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Lifecycle" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    // List all projects and find it
+    const listRes = await request(server, "/projects");
+    const projects = JSON.parse(listRes.body);
+    const fromList = projects.find((p: { id: string }) => p.id === created.id);
+    expect(fromList).toBeDefined();
+
+    // Get by ID and compare
+    const getRes = await request(server, `/projects/${created.id}`);
+    const fromGet = JSON.parse(getRes.body);
+    expect(fromGet).toEqual(fromList);
+  });
+
+  it("can retrieve the Inbox project by ID", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    // Get the Inbox ID from the list
+    const listRes = await request(server, "/projects");
+    const projects = JSON.parse(listRes.body);
+    const inbox = projects[0];
+
+    const res = await request(server, `/projects/${inbox.id}`);
+    expect(res.status).toBe(200);
+    const project = JSON.parse(res.body);
+    expect(project.id).toBe(inbox.id);
+    expect(project.name).toBe("Inbox");
+  });
+});
+
 describe("POST /projects without projectStore", () => {
   let server: http.Server;
 
