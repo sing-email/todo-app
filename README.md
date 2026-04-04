@@ -1,3 +1,4 @@
+<!-- acceptance-test: 1775316830193 -->
 # Todo App
 
 A simple todo application — used as a test target for [Circuit](https://github.com/sing-email/circuit).
