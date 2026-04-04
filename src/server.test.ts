@@ -803,26 +803,63 @@ describe("GET /projects", () => {
 
   afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
-  it("AC4: newly created project appears in project list", async () => {
+  it("AC1: retrieves a list of all projects", async () => {
     const todoStore = new TodoStore();
     const projectStore = new ProjectStore(todoStore);
     server = createApp(todoStore, projectStore).listen(0);
 
-    // Create a project
-    await request(server, "/projects", {
-      method: "POST",
-      body: { name: "Work" },
-    });
-
-    // List projects
     const res = await request(server, "/projects");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/application\/json/);
     const projects = JSON.parse(res.body);
     expect(Array.isArray(projects)).toBe(true);
+    expect(projects.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("AC2: Inbox always appears as the first project in the list", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    // Create projects before Inbox alphabetically
+    await request(server, "/projects", { method: "POST", body: { name: "Alpha" } });
+    await request(server, "/projects", { method: "POST", body: { name: "Beta" } });
+
+    const res = await request(server, "/projects");
+    const projects = JSON.parse(res.body);
+    expect(projects[0].name).toBe("Inbox");
+  });
+
+  it("AC3: each project in the list includes its ID and name", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    await request(server, "/projects", { method: "POST", body: { name: "Work" } });
+
+    const res = await request(server, "/projects");
+    const projects = JSON.parse(res.body);
+    for (const project of projects) {
+      expect(project.id).toEqual(expect.any(String));
+      expect(project.name).toEqual(expect.any(String));
+    }
+  });
+
+  it("AC4: the list includes projects I have created", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    await request(server, "/projects", { method: "POST", body: { name: "Work" } });
+    await request(server, "/projects", { method: "POST", body: { name: "Personal" } });
+
+    const res = await request(server, "/projects");
+    expect(res.status).toBe(200);
+    const projects = JSON.parse(res.body);
     const names = projects.map((p: { name: string }) => p.name);
     expect(names).toContain("Inbox");
     expect(names).toContain("Work");
+    expect(names).toContain("Personal");
   });
 
   it("returns only Inbox when no projects have been created", async () => {
