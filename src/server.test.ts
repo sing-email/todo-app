@@ -969,3 +969,116 @@ describe("POST /projects without projectStore", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("DELETE /projects/:id", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("AC1: deletes a project by its ID and returns 200", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const created = JSON.parse(createRes.body);
+
+    const res = await request(server, `/projects/${created.id}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const body = JSON.parse(res.body);
+    expect(body.deleted).toBe(true);
+    expect(body.todosRelocated).toBe(0);
+  });
+
+  it("AC2: todos from the deleted project are moved to Inbox", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const project = JSON.parse(createRes.body);
+
+    // Create todos in the project via the store (POST /todos doesn't support projectId)
+    const todo1 = projectStore.createTodo("Task A", project.id);
+    const todo2 = projectStore.createTodo("Task B", project.id);
+
+    const deleteRes = await request(server, `/projects/${project.id}`, {
+      method: "DELETE",
+    });
+    const deleteBody = JSON.parse(deleteRes.body);
+    expect(deleteBody.deleted).toBe(true);
+    expect(deleteBody.todosRelocated).toBe(2);
+
+    // Verify todos moved to Inbox
+    const inboxId = projectStore.getInboxId();
+    expect(todoStore.get(todo1.id)?.projectId).toBe(inboxId);
+    expect(todoStore.get(todo2.id)?.projectId).toBe(inboxId);
+  });
+
+  it("AC3: the deleted project no longer appears in the project list", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const createRes = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const project = JSON.parse(createRes.body);
+
+    await request(server, `/projects/${project.id}`, {
+      method: "DELETE",
+    });
+
+    const listRes = await request(server, "/projects");
+    const projects = JSON.parse(listRes.body);
+    expect(projects.every((p: { id: string }) => p.id !== project.id)).toBe(true);
+  });
+
+  it("AC4: returns 400 when attempting to delete the Inbox project", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const listRes = await request(server, "/projects");
+    const inbox = JSON.parse(listRes.body)[0];
+
+    const res = await request(server, `/projects/${inbox.id}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toMatch(/Cannot delete the Inbox project/);
+  });
+
+  it("AC5: returns 404 when attempting to delete a non-existent project", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects/nonexistent-id", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+    const body = JSON.parse(res.body);
+    expect(body.error).toMatch(/Project not found/);
+  });
+
+  it("returns 404 when no projectStore is configured", async () => {
+    server = createApp(new TodoStore()).listen(0);
+
+    const res = await request(server, "/projects/some-id", {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+});
