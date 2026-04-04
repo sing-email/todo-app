@@ -7,6 +7,33 @@ export interface Todo {
   tags: string[];
 }
 
+export interface PaginatedResult<T> {
+  items: T[];
+  pagination: {
+    cursor: string | null;
+    hasMore: boolean;
+    total: number;
+  };
+}
+
+function encodeCursor(offset: number): string {
+  return Buffer.from(`offset:${offset}`).toString("base64url");
+}
+
+export function decodeCursor(cursor: string): number {
+  let decoded: string;
+  try {
+    decoded = Buffer.from(cursor, "base64url").toString();
+  } catch {
+    throw new Error("Invalid cursor");
+  }
+  const match = decoded.match(/^offset:(\d+)$/);
+  if (!match) {
+    throw new Error("Invalid cursor");
+  }
+  return parseInt(match[1], 10);
+}
+
 export class TodoStore {
   private todos: Map<string, Todo> = new Map();
 
@@ -39,6 +66,23 @@ export class TodoStore {
 
   list(): Todo[] {
     return Array.from(this.todos.values());
+  }
+
+  listPaginated(limit: number = 20, cursor?: string): PaginatedResult<Todo> {
+    const all = Array.from(this.todos.values());
+    const total = all.length;
+    const offset = cursor ? decodeCursor(cursor) : 0;
+    const items = all.slice(offset, offset + limit);
+    const nextOffset = offset + items.length;
+    const hasMore = nextOffset < total;
+    return {
+      items,
+      pagination: {
+        cursor: hasMore ? encodeCursor(nextOffset) : null,
+        hasMore,
+        total,
+      },
+    };
   }
 
   complete(id: string): Todo {

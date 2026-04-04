@@ -27,8 +27,20 @@ export function createApp(todoStore: TodoStore): http.Server {
     }
 
     if (req.method === "GET" && pathname === "/todos") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(todoStore.list()));
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const limitParam = url.searchParams.get("limit");
+      const cursor = url.searchParams.get("cursor") ?? undefined;
+      const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+
+      try {
+        const result = todoStore.listPaginated(limit, cursor);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Invalid cursor";
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: message }));
+      }
       return;
     }
 

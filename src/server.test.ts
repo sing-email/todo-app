@@ -160,7 +160,7 @@ describe("DELETE /todos/:id", () => {
     expect(res.status).toBe(200);
 
     const listRes = await request(server, "/todos");
-    expect(JSON.parse(listRes.body)).toEqual([]);
+    expect(JSON.parse(listRes.body).items).toEqual([]);
   });
 
   it("returns 404 when todo does not exist", async () => {
@@ -183,7 +183,7 @@ describe("DELETE /todos/:id", () => {
     expect(res.status).toBe(200);
 
     const listRes = await request(server, "/todos");
-    expect(JSON.parse(listRes.body)).toEqual([]);
+    expect(JSON.parse(listRes.body).items).toEqual([]);
   });
 
   it("returns 404 for extra path segments", async () => {
@@ -429,15 +429,19 @@ describe("GET /todos", () => {
 
   afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
-  it("returns 200 with empty array when no todos exist", async () => {
+  it("returns 200 with envelope containing empty items when no todos exist", async () => {
     server = createApp(new TodoStore()).listen(0);
     const res = await request(server, "/todos");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/application\/json/);
-    expect(JSON.parse(res.body)).toEqual([]);
+    const body = JSON.parse(res.body);
+    expect(body).toEqual({
+      items: [],
+      pagination: { cursor: null, hasMore: false, total: 0 },
+    });
   });
 
-  it("returns 200 with todos after creating one", async () => {
+  it("returns 200 with todos in envelope after creating one", async () => {
     const store = new TodoStore();
     server = createApp(store).listen(0);
     await request(server, "/todos", {
@@ -446,9 +450,121 @@ describe("GET /todos", () => {
     });
     const res = await request(server, "/todos");
     expect(res.status).toBe(200);
-    const todos = JSON.parse(res.body);
-    expect(todos).toHaveLength(1);
-    expect(todos[0].title).toBe("Walk the dog");
+    const body = JSON.parse(res.body);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].title).toBe("Walk the dog");
+    expect(body.pagination.total).toBe(1);
+  });
+
+  // AC1: Requesting the todo list returns a page of results (default 20) rather than the full list
+  it("AC1: returns at most 20 items by default", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+    const res = await request(server, "/todos");
+    const body = JSON.parse(res.body);
+    expect(body.items).toHaveLength(20);
+    expect(body.pagination.total).toBe(25);
+  });
+
+  // AC2: Each page response includes a cursor I can use to fetch the next page
+  it("AC2: cursor from first page fetches the next page", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const page1 = JSON.parse((await request(server, "/todos")).body);
+    expect(page1.pagination.cursor).toEqual(expect.any(String));
+
+    const page2 = JSON.parse(
+      (await request(server, `/todos?cursor=${page1.pagination.cursor}`)).body,
+    );
+    expect(page2.items).toHaveLength(5);
+    // Pages should not overlap
+    const page1Ids = new Set(page1.items.map((t: { id: string }) => t.id));
+    for (const item of page2.items) {
+      expect(page1Ids.has(item.id)).toBe(false);
+    }
+  });
+
+  // AC3: Each page response tells me whether more pages exist
+  it("AC3: hasMore is true when more pages exist, false on last page", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const page1 = JSON.parse((await request(server, "/todos")).body);
+    expect(page1.pagination.hasMore).toBe(true);
+
+    const page2 = JSON.parse(
+      (await request(server, `/todos?cursor=${page1.pagination.cursor}`)).body,
+    );
+    expect(page2.pagination.hasMore).toBe(false);
+    expect(page2.pagination.cursor).toBeNull();
+  });
+
+  // AC4: Each page response includes the total number of todos
+  it("AC4: total reflects the full count across all pages", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 25; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const page1 = JSON.parse((await request(server, "/todos")).body);
+    expect(page1.pagination.total).toBe(25);
+
+    const page2 = JSON.parse(
+      (await request(server, `/todos?cursor=${page1.pagination.cursor}`)).body,
+    );
+    expect(page2.pagination.total).toBe(25);
+  });
+
+  // AC5: I can control how many todos appear per page via a limit query parameter
+  it("AC5: limit query parameter controls page size", async () => {
+    const store = new TodoStore();
+    for (let i = 0; i < 10; i++) {
+      store.add(`Todo ${i}`);
+    }
+    server = createApp(store).listen(0);
+
+    const res = await request(server, "/todos?limit=3");
+    const body = JSON.parse(res.body);
+    expect(body.items).toHaveLength(3);
+    expect(body.pagination.hasMore).toBe(true);
+    expect(body.pagination.total).toBe(10);
+  });
+
+  // AC6: Requesting with an invalid cursor returns a clear error message
+  it("AC6: invalid cursor returns 400 with error message", async () => {
+    server = createApp(new TodoStore()).listen(0);
+    const res = await request(server, "/todos?cursor=not-a-valid-cursor");
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+    expect(body.error).toMatch(/cursor/i);
+  });
+
+  // AC7: Response uses consistent envelope format (items, pagination metadata)
+  it("AC7: response uses envelope with items and pagination keys", async () => {
+    const store = new TodoStore();
+    store.add("Test");
+    server = createApp(store).listen(0);
+
+    const res = await request(server, "/todos");
+    const body = JSON.parse(res.body);
+    expect(body).toHaveProperty("items");
+    expect(body).toHaveProperty("pagination");
+    expect(body.pagination).toHaveProperty("cursor");
+    expect(body.pagination).toHaveProperty("hasMore");
+    expect(body.pagination).toHaveProperty("total");
+    expect(Array.isArray(body.items)).toBe(true);
   });
 });
 

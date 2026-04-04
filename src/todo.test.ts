@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TodoStore } from "./todo.js";
+import { TodoStore, decodeCursor } from "./todo.js";
 
 describe("TodoStore", () => {
   it("adds a todo", () => {
@@ -186,6 +186,56 @@ describe("TodoStore", () => {
       expect(() => store.addTag(todo.id, "urgent")).toThrowError(
         "Tag already exists",
       );
+    });
+  });
+
+  describe("listPaginated", () => {
+    it("returns all items when count is within default limit", () => {
+      const store = new TodoStore();
+      store.add("A");
+      store.add("B");
+      const result = store.listPaginated();
+      expect(result.items).toHaveLength(2);
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.cursor).toBeNull();
+      expect(result.pagination.total).toBe(2);
+    });
+
+    it("paginates with custom limit", () => {
+      const store = new TodoStore();
+      for (let i = 0; i < 5; i++) store.add(`Todo ${i}`);
+      const result = store.listPaginated(2);
+      expect(result.items).toHaveLength(2);
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.total).toBe(5);
+    });
+
+    it("follows cursor to second page", () => {
+      const store = new TodoStore();
+      for (let i = 0; i < 5; i++) store.add(`Todo ${i}`);
+      const page1 = store.listPaginated(3);
+      const page2 = store.listPaginated(3, page1.pagination.cursor!);
+      expect(page2.items).toHaveLength(2);
+      expect(page2.pagination.hasMore).toBe(false);
+      expect(page2.pagination.cursor).toBeNull();
+    });
+
+    it("returns empty items for empty store", () => {
+      const store = new TodoStore();
+      const result = store.listPaginated();
+      expect(result.items).toEqual([]);
+      expect(result.pagination.total).toBe(0);
+    });
+  });
+
+  describe("decodeCursor", () => {
+    it("throws on non-base64 string", () => {
+      expect(() => decodeCursor("!!!")).toThrowError("Invalid cursor");
+    });
+
+    it("throws on base64 with wrong format", () => {
+      const bad = Buffer.from("wrong:format").toString("base64url");
+      expect(() => decodeCursor(bad)).toThrowError("Invalid cursor");
     });
   });
 
