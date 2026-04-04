@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import http from "node:http";
 import { createApp } from "./server.js";
 import { TodoStore } from "./todo.js";
+import { ProjectStore } from "./project.js";
 
 function request(
   server: http.Server,
@@ -675,5 +676,187 @@ describe("POST /todos/:id/tags", () => {
     expect(res.status).toBe(400);
     const body = JSON.parse(res.body);
     expect(body.error).toEqual(expect.any(String));
+  });
+});
+
+describe("POST /projects", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("AC1: creates a project by providing a name and returns 201", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    expect(res.status).toBe(201);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+  });
+
+  it("AC2: returns the created project with its ID and name", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    const project = JSON.parse(res.body);
+    expect(project.id).toEqual(expect.any(String));
+    expect(project.name).toBe("Work");
+    expect(project.createdAt).toEqual(expect.any(String));
+  });
+
+  it("AC3: returns 400 when name is missing", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: {},
+    });
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC3: returns 400 when name is empty string", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "" },
+    });
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("AC3: returns 400 when name is whitespace-only", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "   " },
+    });
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toEqual(expect.any(String));
+  });
+
+  it("returns 400 when project name already exists", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    expect(res.status).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toMatch(/already exists/);
+  });
+
+  it("returns 400 for invalid JSON body", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const addr = server.address();
+    if (!addr || typeof addr === "string") throw new Error("no address");
+    const res = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = http.request(
+        { hostname: "127.0.0.1", port: addr.port, path: "/projects", method: "POST", headers: { "Content-Type": "application/json", "Content-Length": 11 } },
+        (res) => {
+          let body = "";
+          res.on("data", (chunk) => (body += chunk));
+          res.on("end", () => resolve({ status: res.statusCode!, body }));
+          res.on("error", reject);
+        },
+      );
+      req.on("error", reject);
+      req.write("not-valid{}");
+      req.end();
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /projects", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("AC4: newly created project appears in project list", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    // Create a project
+    await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+
+    // List projects
+    const res = await request(server, "/projects");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const projects = JSON.parse(res.body);
+    expect(Array.isArray(projects)).toBe(true);
+    const names = projects.map((p: { name: string }) => p.name);
+    expect(names).toContain("Inbox");
+    expect(names).toContain("Work");
+  });
+
+  it("returns only Inbox when no projects have been created", async () => {
+    const todoStore = new TodoStore();
+    const projectStore = new ProjectStore(todoStore);
+    server = createApp(todoStore, projectStore).listen(0);
+
+    const res = await request(server, "/projects");
+    expect(res.status).toBe(200);
+    const projects = JSON.parse(res.body);
+    expect(projects).toHaveLength(1);
+    expect(projects[0].name).toBe("Inbox");
+  });
+
+  it("returns 404 when no projectStore is configured", async () => {
+    server = createApp(new TodoStore()).listen(0);
+
+    const res = await request(server, "/projects");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /projects without projectStore", () => {
+  let server: http.Server;
+
+  afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  it("returns 404 when no projectStore is configured", async () => {
+    server = createApp(new TodoStore()).listen(0);
+
+    const res = await request(server, "/projects", {
+      method: "POST",
+      body: { name: "Work" },
+    });
+    expect(res.status).toBe(404);
   });
 });

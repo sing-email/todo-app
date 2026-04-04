@@ -3,12 +3,13 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { TodoStore } from "./todo.js";
+import { ProjectStore } from "./project.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8"));
 const appVersion: string = pkg.version;
 
-export function createApp(todoStore: TodoStore): http.Server {
+export function createApp(todoStore: TodoStore, projectStore?: ProjectStore): http.Server {
   return http.createServer((req, res) => {
     console.log(`${req.method} ${req.url}`);
 
@@ -204,6 +205,35 @@ export function createApp(todoStore: TodoStore): http.Server {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Todo not found" }));
       }
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/projects" && projectStore) {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        try {
+          const parsed = JSON.parse(body);
+          if (typeof parsed.name !== "string" || parsed.name.trim().length === 0) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "name is required" }));
+            return;
+          }
+          const project = projectStore.add(parsed.name);
+          res.writeHead(201, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(project));
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Invalid JSON";
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: message }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/projects" && projectStore) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(projectStore.list()));
       return;
     }
 
