@@ -27,8 +27,37 @@ export function createApp(todoStore: TodoStore): http.Server {
     }
 
     if (req.method === "GET" && pathname === "/todos") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(todoStore.list()));
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const limitParam = url.searchParams.get("limit");
+      const cursorParam = url.searchParams.get("cursor");
+
+      let limit = 20;
+      if (limitParam !== null) {
+        const parsed = Number(limitParam);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "limit must be a positive integer" }));
+          return;
+        }
+        limit = parsed;
+      }
+
+      try {
+        const result = todoStore.listPaginated(limit, cursorParam ?? undefined);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          items: result.items,
+          pagination: {
+            cursor: result.cursor,
+            hasMore: result.hasMore,
+            total: result.total,
+          },
+        }));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Invalid cursor";
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: message }));
+      }
       return;
     }
 
